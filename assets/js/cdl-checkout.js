@@ -49,8 +49,6 @@ jQuery(document).ready(function ($) {
         };
 
         signTransaction(transaction).done(function (signature) {
-            console.log(transaction)
-            console.log(cdlCheckoutData.publicKey)
             const config = {
                 publicKey: cdlCheckoutData.publicKey,
                 signature: signature,
@@ -62,11 +60,9 @@ jQuery(document).ready(function ($) {
                 onClose: function () {
                     $('#cdl-checkout-payment-button').show();
                     $('#cdl-checkout-cancel-payment-button').show();
-                    console.log('User closed checkout widget.');
                 },
                 onPopup: function (response) {
                     $("body").unblock()
-                    console.log(JSON.stringify(response));
 
                     // Save checkoutTransactionId to order
                     $.ajax({
@@ -75,13 +71,14 @@ jQuery(document).ready(function ($) {
                         data: {
                             action: 'save_checkout_transaction_id',
                             order_id: cdlCheckoutData.orderId,
+                            nonce: cdlCheckoutData.saveCheckoutTransactionIdNonce,
                             checkoutTransactionId: response.checkoutTransactionId
                         },
                         success: function (res) {
-                            console.log('Transaction ID saved:', res);
+
                         },
                         error: function (err) {
-                            console.error('Failed to save transaction ID:', err);
+
                         }
                     });
                 }

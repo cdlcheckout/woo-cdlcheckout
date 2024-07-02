@@ -80,9 +80,17 @@ function cdl_checkout_wc_add_gateway($gateways) {
 
 /**
  * Display a notice if WooCommerce is not installed
+ *
  */
+
 function cdl_checkout_wc_missing_notice() {
-    echo '<div class="error"><p><strong>' . sprintf( __( 'CDL Checkout requires WooCommerce to be installed and active. Click %s to install WooCommerce.', 'cdl-checkout' ), '<a href="' . admin_url( 'plugin-install.php?tab=plugin-information&plugin=woocommerce&TB_iframe=true&width=772&height=539' ) . '" class="thickbox open-plugin-details-modal">here</a>' ) . '</strong></p></div>';
+    $message = sprintf(
+    /* translators: %s is the placeholder for the link to install WooCommerce */
+        esc_html__( 'CDL Checkout requires WooCommerce to be installed and active. Click %s to install WooCommerce.', 'cdl-checkout' ),
+        '<a href="' . esc_url( admin_url( 'plugin-install.php?tab=plugin-information&plugin=woocommerce&TB_iframe=true&width=772&height=539' ) ) . '" class="thickbox open-plugin-details-modal">' . esc_html__( 'here', 'cdl-checkout' ) . '</a>'
+    );
+
+    echo '<div class="error"><p><strong>' . wp_kses_post( $message ) . '</strong></p></div>';
 }
 
 /**
@@ -197,6 +205,8 @@ add_action('wp_ajax_save_checkout_transaction_id', 'save_checkout_transaction_id
 add_action('wp_ajax_nopriv_save_checkout_transaction_id', 'save_checkout_transaction_id');
 
 function save_checkout_transaction_id() {
+    check_ajax_referer('save_checkout_transaction_id', 'nonce');
+
     if (!isset($_POST['order_id']) || !isset($_POST['checkoutTransactionId'])) {
         wp_send_json_error('Missing parameters');
     }

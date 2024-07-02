@@ -9,6 +9,7 @@
 - **Requires at least:** 4.4
 - **Tested up to:** 6.5.5
 - **Stable tag:** 1.4.2
+- **Requires PHP:** 7.4
 - **License:** GPL-2.0+
 - **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 

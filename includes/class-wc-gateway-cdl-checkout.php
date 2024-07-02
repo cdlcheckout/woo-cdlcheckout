@@ -144,9 +144,15 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
         }
 
         // Check required fields.
+
         if ( ! ( $this->public_key && $this->secret_key ) ) {
-            echo '<div class="error"><p>' . sprintf( __( 'Please enter your CDL Checkout merchant details <a href="%s">here</a> to be able to use the CDL Checkout WooCommerce plugin.', 'cdl-checkout' ), admin_url( 'admin.php?page=wc-settings&tab=checkout&section=cdl_checkout' ) ) . '</p></div>';
-            return;
+           $message = sprintf(
+           // Translators: %s is the placeholder for the link to CDL Checkout setting page
+               esc_html__( 'Please enter your CDL Checkout merchant details <a href="%s">here</a> to be able to use the CDL Checkout WooCommerce plugin.', 'cdl-checkout' ),
+               esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=cdl_checkout' ) )
+            );
+
+            echo '<div class="error"><p>' . wp_kses_post( $message ) . '</p></div>';
         }
 
     }
@@ -157,7 +163,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
     public function admin_options() {
 
         ?>
-        <h2><?php _e( 'CDL Checkout', 'cdl-checkout' ); ?>
+        <h2><?php esc_html_e( 'CDL Checkout', 'cdl-checkout' ); ?>
             <?php
             if ( function_exists( 'wc_back_link' ) ) {
                 wc_back_link( __( 'Return to payments', 'cdl-checkout' ), admin_url( 'admin.php?page=wc-settings&tab=checkout' ) );
@@ -168,7 +174,19 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
             <strong>
                 <?php
                 $webhook_url = untrailingslashit( WC()->api_request_url( 'Cdl_Checkout_WC_Payment_Webhook' ) );
-                printf( __( 'Optional: To avoid situations where bad network makes it impossible to verify transactions, set your webhook URL <a href="%1$s" target="_blank" rel="noopener noreferrer">here</a> to the URL below<span style="color: red; display: flex"><pre><code id="webhook-url">%2$s</code></pre><button role="button" id="copy-webhook-url" style="cursor: pointer; margin-left: 15px; padding: 0  8px">Copy</button></span>', 'cdl-checkout' ), 'https://www.creditdirect.ng', esc_html( $webhook_url ) ); ?>
+
+
+                $message = sprintf(
+                // Translators: %1$s is the placeholder for the cdl checkout merchant URL
+                // Translators: %2$s is the placeholder for the cdl checkout webhook URL
+                    esc_html__( 'Optional: To avoid situations where bad network makes it impossible to verify transactions, set your webhook URL <a href="%1$s" target="_blank" rel="noopener noreferrer">here</a> to the URL below<span style="color: red; display: flex"><pre><code id="webhook-url">%2$s</code></pre><button role="button" id="copy-webhook-url" style="cursor: pointer; margin-left: 15px; padding: 0  8px">Copy</button></span>', 'cdl-checkout'),
+                    esc_url( 'https://www.creditdirect.ng' ),
+                    esc_url( $webhook_url )
+                );
+
+                echo '<div class="error"><p>' . wp_kses_post( $message ) . '</p></div>';
+
+                ?>
             </strong>
         </h4>
 
@@ -182,7 +200,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
 
     public function payment_fields() {
         if ( $this->description ) {
-            echo wpautop( wptexturize( $this->description ) );
+            echo esc_html( wptexturize( $this->description ) );
         }
 
         if ( ! is_ssl() ) {
@@ -195,12 +213,12 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
 
         echo '<div id="cdl-checkout-wc-form">';
 
-        echo '<p>' . __('Thank you for your order, please click the button below to pay with CDL Checkout.', 'cdl-checkout') . '</p>';
+        echo '<p>' . esc_html_e('Thank you for your order, please click the button below to pay with CDL Checkout.', 'cdl-checkout') . '</p>';
 
-        echo '<div id="cdl_checkout_form"><form id="order_review" method="post" action="' . WC()->api_request_url( 'WC_Gateway_CdlCheckout' ) . '"></form><button class="button" id="cdl-checkout-payment-button">' . __( 'Pay Now', 'cdl-checkout' ) . '</button>';
+        echo '<div id="cdl_checkout_form"><form id="order_review" method="post" action="' . esc_url(WC()->api_request_url( 'WC_Gateway_CdlCheckout' ) ) . '"></form><button class="button" id="cdl-checkout-payment-button">' . esc_html_e( 'Pay Now', 'cdl-checkout' ) . '</button>';
 
         if ( ! $this->remove_cancel_order_button ) {
-            echo '  <a class="button cancel" id="cdl-checkout-cancel-payment-button" href="' . esc_url( $order->get_cancel_order_url() ) . '">' . __( 'Cancel order &amp; restore cart', 'cdl-checkout' ) . '</a></div>';
+            echo '  <a class="button cancel" id="cdl-checkout-cancel-payment-button" href="' . esc_url( $order->get_cancel_order_url() ) . '">' . esc_html_e( 'Cancel order &amp; restore cart', 'cdl-checkout' ) . '</a></div>';
         }
 
         echo '</div>';
@@ -244,6 +262,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
                 'products' => $this->get_cart_items(),
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'signTransactionNonce' => wp_create_nonce('sign_transaction'),
+                'saveCheckoutTransactionIdNonce' => wp_create_nonce('save_checkout_transaction_id'),
                 'returnUrl' => $this->get_return_url($order)
             ]);
         }
@@ -293,7 +312,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
 
         $logger = wc_get_logger();
         $log_context = array('source' => 'cdl_checkout_webhook');
-        $timestamp = date("Y-m-d H:i:s"); // Current time
+        $timestamp = gmdate("Y-m-d H:i:s"); // Current time
 
         $logger->info("Webhook received at: $timestamp", $log_context);
 
@@ -322,7 +341,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
 
                     // Respond back to acknowledge receipt of the webhook
                     header('HTTP/1.1 200 OK');
-                    echo json_encode(['status' => 'success', 'message' => 'Webhook processed successfully 1']);
+                    echo wp_json_encode(['status' => 'success', 'message' => 'Webhook processed successfully 1']);
                     exit;
                 }
 
@@ -348,7 +367,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
 
                     // Respond back to acknowledge receipt of the webhook
                     header('HTTP/1.1 200 OK');
-                    echo json_encode(['status' => 'success', 'message' => 'Webhook processed successfully']);
+                    echo wp_json_encode(['status' => 'success', 'message' => 'Webhook processed successfully']);
                     exit;
                 }
 
@@ -360,7 +379,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
         $logger->error("Invalid data received at: $timestamp", $log_context);
 
         header('HTTP/1.1 400 Bad Request');
-        echo json_encode(['status' => 'error', 'message' => 'Invalid data received']);
+        echo wp_json_encode(['status' => 'error', 'message' => 'Invalid data received']);
         exit;
     }
 
@@ -395,7 +414,7 @@ class WC_Gateway_CdlCheckout extends WC_Payment_Gateway {
         $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         $result = '';
         for ($i = 0; $i < $length; $i++) {
-            $result .= $characters[rand(0, strlen($characters) - 1)];
+            $result .= $characters[wp_rand(0, strlen($characters) - 1)];
         }
         return $result;
     }
